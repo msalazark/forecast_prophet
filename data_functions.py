@@ -4,6 +4,7 @@ import numpy as np
 from datetime import datetime, timedelta, date
 import openpyxl
 import json
+import streamlit as st
 
 # Visualización
 import matplotlib.pyplot as plt
@@ -77,13 +78,18 @@ def xboxplots(data, campo, clasificador ):
   # Aplicamos Anova
   modelo = ols( campo + ' ~ '+ clasificador, data=data).fit()
   anova_tabla = sma.stats.anova_lm(modelo, typ=2)
-  print(anova_tabla)
+  #print(anova_tabla)
 
   # Mostramos Box Plot por categoría
+  fig1 = plt.figure()
   sns.boxplot(x=clasificador, y=campo, data=data)
-  plt.show()
+  plt.title(f'Box Plot de {campo} por {clasificador}')
+  plt.grid(True)
 
-  print("PR(>F): Un valor p pequeño (generalmente menor a 0.05) indica que al menos dos grupos son significativamente diferentes entre sí")
+  comentario = "PR(>F): Un valor p pequeño (generalmente menor a 0.05) indica que al menos dos grupos son significativamente diferentes entre sí"
+  #plt.show()
+
+  return anova_tabla, fig1, comentario
 
 
 def select_outliers(df, columna, threshold=1.5):
@@ -176,45 +182,48 @@ def validacion_estadistica(df, variables, columna_cat=None):
     """
 
     for columna in variables:
-        print(f"Análisis de la columna: {columna}")
+        st.title(f"Análisis de la columna: {columna}")
         datos = df[columna].dropna()  # Excluir NaNs
 
         # Determinar si la columna es numérica o categórica
         if pd.api.types.is_numeric_dtype(datos):
             # Histograma para inspección visual
-            plt.figure(figsize=(3,3))
-            plt.hist(datos, bins=10)
-            plt.title(f"Histograma de {columna}")
-            plt.show()
-            print("------------------------------------------------------------\n")
+
+            fig, ax = plt.subplots(figsize=(15,6))
+            ax.hist(datos, bins=10)
+            ax.set_title(f"Histograma de {columna}")
+            plt.tight_layout()
+            st.pyplot(fig)
+
+            st.write("------------------------------------------------------------\n")
 
             # Prueba de Shapiro-Wilk para normalidad
             stat, p = shapiro(datos)
-            print(f"Prueba de Shapiro-Wilk: Estadístico={stat:.3f}, p={p:.3f}")
+            st.write(f"Prueba de Shapiro-Wilk: Estadístico={stat:.3f}, p={p:.3f}")
             if p > 0.05:
-                print("Los datos parecen seguir una distribución normal.")
+                st.write("Los datos parecen seguir una distribución normal.")
             else:
-                print("Los datos no parecen seguir una distribución normal.")
+                st.write("Los datos no parecen seguir una distribución normal.")
 
-            print("------------------------------------------------------------\n")
+            st.write("------------------------------------------------------------\n")
 
             # Prueba de Levene si se proporciona una columna categórica
             if columna_cat:
                 grupos = df.groupby(columna_cat)[columna].apply(list)
                 stat, p = levene(*grupos)
-                print(f"Prueba de Levene: Estadístico={stat:.3f}, p={p:.3f}")
+                st.write(f"Prueba de Levene: Estadístico={stat:.3f}, p={p:.3f}")
                 if p > 0.05:
-                    print("Las varianzas son homogéneas.")
+                    st.write("Las varianzas son homogéneas.")
                 else:
-                    print("Las varianzas no son homogéneas.")
+                    st.write("Las varianzas no son homogéneas.")
 
-            print("------------------------------------------------------------\n")
+            st.write("------------------------------------------------------------\n")
 
         elif pd.api.types.is_categorical_dtype(datos) or pd.api.types.is_object_dtype(datos):
             # Conteo de valores para variables categóricas
-            print(f"Conteo de valores para {columna}:\n{datos.value_counts()}")
+            st.write(f"Conteo de valores para {columna}:\n{datos.value_counts()}")
 
-        print("------------------------------------------------------------\n")
+        st.write("------------------------------------------------------------\n")
 
 
 ###########################################################
